@@ -1,0 +1,21 @@
+ERROR:root:An error occurred while withdrawing the application: no such column: applied_jobs
+ERROR:root:An error occurred while deleting the job: module 'db.users_requests' has no attribute 'job_delete'
+ERROR:root:An error occurred while deleting the job: module 'db.users_requests' has no attribute 'job_delete'
+ERROR:root:An error occurred while deleting the job: module 'db.users_requests' has no attribute 'job_delete'
+ERROR:root:An error occurred while deleting the job: module 'db.users_requests' has no attribute 'job_delete'
+ERROR:root:An error occurred while deleting the job: name 'job_delete' is not defined
+ERROR:root:An error occurred while deleting the job: name 'job_delete' is not defined
+ERROR:root:An error occurred while fetching job applicants: 'NoneType' object is not subscriptable
+ERROR:root:An error occurred while retrieving user details: 401: Invalid token
+ERROR:root:Error occurred while handling token exceptions: 401: No token found. Please log in first.
+ERROR:root:Error occurred while handling token exceptions: 401: No token found. Please log in first.
+ERROR:root:Error occurred while handling token exceptions: 401: No token found. Please log in first.
+ERROR:root:An error occurred while fetching job applicants: 'NoneType' object is not subscriptable
+ERROR:root:An error occurred while fetching job applicants: 'NoneType' object is not subscriptable
+ERROR:root:An error occurred while fetching job applicants: 'NoneType' object is not subscriptable
+ERROR:root:An error occurred while fetching job applicants: 'NoneType' object is not subscriptable
+ERROR:root:An error occurred while fetching job applicants: 'NoneType' object is not subscriptable
+ERROR:root:An error occurred while fetching job applicants: 401: Only employers can view job applicants.
+ERROR:root:An error occurred while fetching job applicants: 401: Only employers can view job applicants.
+ERROR:root:An error occurred while fetching job applicants: 401: Only employers can view job applicants.
+ERROR:root:An error occurred while fetching applied jobs: 401: an error occured

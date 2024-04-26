@@ -3,6 +3,7 @@ from models.applications import application_model, application_create_model
 from models.user import user_model
 import sqlite3
 import json
+import logging
 
 database = "revhire.db"
 def job_creation(id:int, jd:application_create_model):
@@ -20,27 +21,24 @@ def job_creation(id:int, jd:application_create_model):
         con.close()
         
 
-def job_fetch_by_id(id:int):
+def job_fetch_by_id(id: int):
+    try:
+        con = sqlite3.connect(database)
+        cur = con.cursor()
+        cur.execute(f"SELECT * FROM job WHERE job_id = ?", (id,))
+        
+        columns = [column[0] for column in cur.description]
+        data = [dict(zip(columns, row)) for row in cur.fetchall()]
 
-    con= sqlite3.connect(database)
-    cur=con.cursor()
-    cur.execute(f"select*from job where job_id='{id}'")
+        con.close()
 
-    columns = [column[0] for column in cur.description]
-    data = [dict(zip(columns, row)) for row in cur.fetchall()]
-
-    z = json.dumps(data)
-    z = json.loads(z)
-
-    print(z)
-    
-    con.close()
-    dic = {}
-    j = 0
-    for i in z:
-        dic[j] = i
-        j +=1
-    return dic
+        if len(data) > 0:
+            return data[0]  # Return the first job data if found
+        else:
+            return {"detail": "Job not found"}
+    except Exception as e:
+        logging.error(f"An error occurred while fetching job details: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while fetching job details.")
 
 def job_posted_by_employee(id:int):
     try:
@@ -66,27 +64,41 @@ def job_posted_by_employee(id:int):
     except Exception:
         raise HTTPException(status_code=401, detail="An error occured with db")
 
-def job_delete(job_id, us_id):
+def job_delete(job_id, user_id):
     try:
-
-        con= sqlite3.connect(database)
-        cur=con.cursor()
-        x = cur.execute(f"select*from job where job_id='{job_id}'")
-        y = x.fetchone()[0]
-        if y == us_id:
-            cur.execute(f"delete from job where job_id='{job_id}'")
+        con = sqlite3.connect(database)
+        cur = con.cursor()
+        
+        # Check if the job exists and if the user is authorized to delete it
+        cur.execute("SELECT posted_by FROM job WHERE job_id = ?", (job_id,))
+        row = cur.fetchone()
+        if row:
+            posted_by = row[0]
+            if posted_by == user_id:
+                # Delete the job if the user is authorized
+                cur.execute("DELETE FROM job WHERE job_id = ?", (job_id,))
+                con.commit()
+                return True
+            else:
+                # User is not authorized to delete the job
+                raise HTTPException(status_code=401, detail="You are not authorized to delete the job posting.")
         else:
-            raise HTTPException(status_code=401, detail="you are not authorised to delete the job posting")
-    except Exception:
-        raise HTTPException(status_code=404, detail="Job not found or connection with database")
+            # Job not found
+            raise HTTPException(status_code=404, detail="Job not found.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Other errors
+        logging.error(f"An error occurred while deleting the job: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while deleting the job.")
     finally:
-        con.commit()
         con.close()
 
 def get_all_job_posts():
     try:
         con= sqlite3.connect(database)
         cur=con.cursor()
+        cur.execute("SELECT * From job")
         columns = [column[0] for column in cur.description]
         data = [dict(zip(columns, row)) for row in cur.fetchall()]
 
@@ -116,7 +128,7 @@ def get_applied_jobs(user_id:int):
 
         y = list(x.fetchone())
 
-        if y[1] == None:
+        if y[1] == "None" or y[1] == None:
             raise HTTPException(status_code=404, detail="No details found")
 
         applied_jobs = str(y[1]).split(",")
@@ -132,51 +144,115 @@ def get_applied_jobs(user_id:int):
 
 def apply_jobs(user_id, job_id):
     try:
-        con= sqlite3.connect(database)
-        cur=con.cursor()
-        x = cur.execute(f"SELECT * FROM applications where id = '{user_id}'")
-        z = cur.execute(f"SELECT * FROM job where job_id = '{job_id}'")
-        y = list(x.fetchone())
-        z1 = (z.fetchone()[3])
+        con = sqlite3.connect("revhire.db")
+        cur = con.cursor()
 
-        if z1 == None:
-            applied_by = user_id
+        # Check if the user has already applied for this job
+        cur.execute(f"SELECT * FROM applications WHERE id = ?", (user_id,))
+        user_data = cur.fetchone()
+        applied_jobs_str = user_data[1] if user_data else None
+
+        # If user has applied for other jobs, append the new job ID
+        if applied_jobs_str:
+            applied_jobs = applied_jobs_str.split(",") + [str(job_id)]
         else:
-            applied_by = str(z1) + "," + job_id
+            applied_jobs = [str(job_id)]
 
+        # Convert list back to string
+        applied_jobs_str = ",".join(applied_jobs)
 
-        if y[1] == None:
-            applied_jobs = job_id
-            jobs_status = "applied"
+        # Update the applications table
+        if user_data:
+            cur.execute(f"UPDATE applications SET application_id = ? WHERE id = ?", (applied_jobs_str, user_id))
         else:
-            applied_jobs = str(y[1]) + "," + job_id
-            jobs_status = str(y[2]) + "," + "applied"
+            cur.execute(f"INSERT INTO applications (id, application_id, application_status) VALUES (?, ?, ?)", (user_id, applied_jobs_str, "applied"))
 
-        cur.execute("UPDATE applications SET application_id = '{applied_jobs}' and application_status = '{jobs_status}' WHERE job_id = '{user_id}'")
-        return {"apply":"sucess"}
-        
-    except:
-        raise HTTPException(status_code=401, detail="an error occured")
-    finally:
+        # Update the job table
+        cur.execute(f"SELECT applied_by FROM job WHERE job_id = ?", (job_id,))
+        applied_by_data = cur.fetchone()
+        applied_by_str = applied_by_data[0] if applied_by_data else None
+
+        # Update applied_by
+        if applied_by_str:
+            applied_by = applied_by_str.split(",") + [str(user_id)]
+        else:
+            applied_by = [str(user_id)]
+
+        # Convert list back to string
+        applied_by_str = ",".join(applied_by)
+
+        # Update the job table with the new applied_by data
+        cur.execute("UPDATE job SET applied_by = ? WHERE job_id = ?", (applied_by_str, job_id))
+
         con.commit()
+        
+        return {"apply": "success"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
+    finally:
         con.close()
+
     
 def get_job_applicants(user_id, job_id):
     try:
-        con= sqlite3.connect(database)
-        cur=con.cursor()
-        x = cur.execute(f"select*from job where job_id='{job_id}'")
+        con = sqlite3.connect(database)
+        cur = con.cursor()
+        cur.execute(f"SELECT applied_by FROM job WHERE job_id=?", (job_id,))
+        row = cur.fetchone()
         
-        y = str(x.fetchone()[3])
-        if y is None:
+        if row is None:
             return {"applied_list": None}
-        y = y.split(",")
-        return {"applied_list":[i for i in y] }
+        
+        applied_by = row[0]
+        if applied_by is None:
+            return {"applied_list": None}
+        
+        applied_list = applied_by.split(",")
+        return {"applied_list": applied_list}
+    except Exception as e:
+        logging.error(f"An error occurred while retrieving job applicants: {e}")
+        raise
     finally:
-        con.commit()
         con.close()
 
 
+def withdraw_application(application_id: int):
+    try:
+        con = sqlite3.connect(database)
+        cur = con.cursor()
+
+        # Update the status of the application to "withdrawn" in the applications table
+        cur.execute("UPDATE applications SET application_status = 'withdrawn' WHERE id = ?", (application_id,))
+        con.commit()
+
+        # Remove the user ID from the applied_by column in the job table
+        cur.execute("SELECT application_id FROM applications WHERE id = ?", (application_id,))
+        applied_jobs_data = cur.fetchone()
+        applied_jobs_str = applied_jobs_data[0] if applied_jobs_data else None
+
+        if applied_jobs_str:
+            applied_jobs_list = applied_jobs_str.split(",")
+            for job_id in applied_jobs_list:
+                cur.execute("SELECT applied_by FROM job WHERE job_id = ?", (job_id,))
+                applied_by_data = cur.fetchone()
+                applied_by_str = applied_by_data[0] if applied_by_data else None
+
+                if applied_by_str:
+                    applied_by_list = applied_by_str.split(",")
+                    if str(application_id) in applied_by_list:
+                        applied_by_list.remove(str(application_id))  # Remove the user ID
+                        applied_by_str = ",".join(applied_by_list)
+                        cur.execute("UPDATE job SET applied_by = ? WHERE job_id = ?", (applied_by_str, job_id))
+                        con.commit()
+
+        con.close()
         
+        return {"message": "Application withdrawn successfully."}
+    except Exception as e:
+        logging.error(f"An error occurred while withdrawing the application: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while withdrawing the application.")
 
     
