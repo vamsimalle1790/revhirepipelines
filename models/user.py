@@ -12,9 +12,9 @@ class user_model(BaseModel):
 class user_smodel(BaseModel):
     name : str
     mail : str
-    mobile : int
-    role : int
     password : str
+    role : int
+    mobile : int
     experience : str = "None"
     skills : str = "None"
 

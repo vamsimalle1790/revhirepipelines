@@ -9,7 +9,7 @@ cur.execute('''CREATE TABLE if not exists user(
         mobile INTEGER NOT NULL UNIQUE,
         role INTEGER NOT NULL,
         password VARCHAR(300) NOT NULL,
-        experience VARCHAR(100) DEFAULT 0,
+        experience VARCHAR(100) NULL,
         skills VARCHAR(500) NULL
         )''')
 

@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends
-from models.user import user_model, user_smodel
+from models.user import user_smodel
 from models.login import login_model
 from models.applications import application_model, application_create_model
 from db import users_requests, job_requests

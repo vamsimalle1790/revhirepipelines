@@ -188,8 +188,6 @@ def apply_jobs(user_id, job_id):
         
         return {"apply": "success"}
         
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
     finally:

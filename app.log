@@ -19,3 +19,7 @@ ERROR:root:An error occurred while fetching job applicants: 401: Only employers 
 ERROR:root:An error occurred while fetching job applicants: 401: Only employers can view job applicants.
 ERROR:root:An error occurred while fetching job applicants: 401: Only employers can view job applicants.
 ERROR:root:An error occurred while fetching applied jobs: 401: an error occured
+ERROR:root:Error occurred during signup: 401: Exception occured, user already exists
+ERROR:root:Error occurred while handling token exceptions: 401: No token found. Please log in first.
+ERROR:root:An error occurred during login: 401: Invalid username or password
+ERROR:root:An error occurred during login: 401: Invalid username or password
