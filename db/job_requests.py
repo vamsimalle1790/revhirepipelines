@@ -1,19 +1,24 @@
 from fastapi import HTTPException
-from models.applications import application_model
+from models.applications import application_model, application_create_model
 from models.user import user_model
 import sqlite3
 import json
 
 database = "revhire.db"
-def job_creation(id:int, jd:application_model):
-    
-    con= sqlite3.connect(database)
-    cur=con.cursor()
-    cur.execute("insert into job(description,skills_req,posted_by)values(?,?,?)",
-                (jd.description,jd.skills_req,id))
-    con.commit()
-    con.close()
-    return {"job created":"sucess"}
+def job_creation(id:int, jd:application_create_model):
+    try:
+        con= sqlite3.connect(database)
+        cur=con.cursor()
+        cur.execute("insert into job(description,skills_req,posted_by)values(?,?,?)",
+                    (jd.description,jd.skills_req,id))
+        con.commit()
+        return {"job created":"sucess"}
+    except Exception:
+        con.rollback()
+        raise HTTPException(status_code=401, detail="There is an problem ")
+    finally:
+        con.close()
+        
 
 def job_fetch_by_id(id:int):
 
@@ -38,25 +43,28 @@ def job_fetch_by_id(id:int):
     return dic
 
 def job_posted_by_employee(id:int):
-    con= sqlite3.connect(database)
-    cur=con.cursor()
-    cur.execute(f"select*from job where posted_by='{id}'")
+    try:
+        con= sqlite3.connect(database)
+        cur=con.cursor()
+        cur.execute(f"select*from job where posted_by='{id}'")
 
-    columns = [column[0] for column in cur.description]
-    data = [dict(zip(columns, row)) for row in cur.fetchall()]
+        columns = [column[0] for column in cur.description]
+        data = [dict(zip(columns, row)) for row in cur.fetchall()]
 
-    z = json.dumps(data)
-    z = json.loads(z)
+        z = json.dumps(data)
+        z = json.loads(z)
 
-    print(z)
-    
-    con.close()
-    dic = {}
-    j = 0
-    for i in z:
-        dic[j] = i
-        j +=1
-    return dic
+        print(z)
+        
+        con.close()
+        dic = {}
+        j = 0
+        for i in z:
+            dic[j] = i
+            j +=1
+        return dic
+    except Exception:
+        raise HTTPException(status_code=401, detail="An error occured with db")
 
 def job_delete(job_id, us_id):
     try:
@@ -69,7 +77,7 @@ def job_delete(job_id, us_id):
             cur.execute(f"delete from job where job_id='{job_id}'")
         else:
             raise HTTPException(status_code=401, detail="you are not authorised to delete the job posting")
-    except:
+    except Exception:
         raise HTTPException(status_code=404, detail="Job not found or connection with database")
     finally:
         con.commit()
@@ -93,6 +101,8 @@ def get_all_job_posts():
             j+=1
         # print(dic)
         return dic
+    except Exception:
+        raise HTTPException(status_code=404, detail="Job not found or connection with database")
     finally:
         con.commit()
         con.close()        

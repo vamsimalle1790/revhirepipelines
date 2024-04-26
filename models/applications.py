@@ -7,3 +7,8 @@ class application_model(BaseModel):
     skills_req : str 
     applied_by :str = None
     posted_by : int
+
+class application_create_model(BaseModel):
+
+    description :str
+    skills_req : str 
