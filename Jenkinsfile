@@ -7,7 +7,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/vamsimalle1790/revhire.git'
+                git credentialsId: 'github-credentials', url: 'https://github.com/vamsimalle1790/revhire.git', branch: 'main'
             }
         }
         stage('Build Docker Image') {
