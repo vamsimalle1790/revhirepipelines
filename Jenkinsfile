@@ -2,29 +2,31 @@ pipeline {
     agent any
     environment {
         DOCKER_IMAGE = "revhire:latest"
-        KUBECONFIG_CREDENTIALS = "kubeconfig-credentials"
+        DOCKER_CREDENTIALS_ID = 'gopika'
     }
     stages {
         stage('Checkout') {
             steps {
-                git credentialsId: 'github-credentials', url: 'https://github.com/vamsimalle1790/revhire.git', branch: 'main'
+                git branch: 'main', url: 'https://github.com/vamsimalle1790/revhire.git'
             }
         }
         stage('Build Docker Image') {
             steps {
                 script {
-                    dockerImage = docker.build("${DOCKER_IMAGE}")
+                    bat "docker build -t %DOCKER_IMAGE% ."
                 }
-            }
+            }        
         }
-        stage('Deploy to Kubernetes') {
+        stage('Push Docker Image') {
             steps {
-                withCredentials([file(credentialsId: "${env.KUBECONFIG_CREDENTIALS}", variable: 'KUBECONFIG')]) {
-                    script {
-                        sh 'kubectl apply -f deployment.yaml --kubeconfig=$KUBECONFIG'
+                script {
+                    withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        bat "docker login -u %DOCKER_USER% -p %DOCKER_PASS%"
+                        bat "docker tag %DOCKER_IMAGE% krishnak3/%DOCKER_IMAGE%"
+                        bat "docker push krishnak3/%DOCKER_IMAGE%"
                     }
                 }
-            }
+            }        
         }
     }
     post {
